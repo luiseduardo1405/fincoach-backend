@@ -1,0 +1,29 @@
+{
+  "name": "fincoach-backend",
+  "version": "1.0.0",
+  "description": "FinCoach REST API",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9",
+    "@fastify/jwt": "^8",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.30",
+    "fastify": "^4",
+    "postgres": "^3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "drizzle-kit": "^0.21",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}
