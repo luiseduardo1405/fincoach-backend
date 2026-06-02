@@ -1,12 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
-import { eq, and, desc, gte, lte, inArray } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '../db';
 import { transactions } from '../db/schema';
 
-const VALID_TYPES = ['venta', 'gasto', 'casa', 'mercaderia'] as const;
+const VALID_TYPES = ['venta', 'gasto', 'casa', 'mercaderia', 'gasto_casa'] as const;
 type EntryType = (typeof VALID_TYPES)[number];
 
-type CreateBody = { type: EntryType; amount: number; note?: string; occurredAt?: string };
+type CreateBody = { type: EntryType; amount: number; note?: string; category?: string; occurredAt?: string };
+type UpdateBody = { note?: string; category?: string };
 type ListQuery = { page?: number; limit?: number; type?: string; from?: string; to?: string };
 
 export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
@@ -64,13 +65,14 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             type: { type: 'string', enum: VALID_TYPES },
             amount: { type: 'number', exclusiveMinimum: 0 },
             note: { type: 'string' },
+            category: { type: 'string' },
             occurredAt: { type: 'string' },
           },
         },
       },
     },
     async (req, reply) => {
-      const { type, amount, note, occurredAt } = req.body;
+      const { type, amount, note, category, occurredAt } = req.body;
 
       const [tx] = await db
         .insert(transactions)
@@ -79,11 +81,43 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
           type,
           amount,
           note: note ?? null,
+          category: category ?? null,
           occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
         })
         .returning();
 
       return reply.status(201).send(tx);
+    },
+  );
+
+  fastify.put<{ Params: { id: string }; Body: UpdateBody }>(
+    '/:id',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            note: { type: 'string' },
+            category: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { note, category } = req.body;
+      const updates: Record<string, unknown> = {};
+      if (note !== undefined) updates.note = note;
+      if (category !== undefined) updates.category = category;
+
+      const [tx] = await db
+        .update(transactions)
+        .set(updates)
+        .where(and(eq(transactions.id, req.params.id), eq(transactions.userId, req.user.sub)))
+        .returning();
+
+      if (!tx) return reply.status(404).send({ error: 'Transacción no encontrada' });
+      return tx;
     },
   );
 

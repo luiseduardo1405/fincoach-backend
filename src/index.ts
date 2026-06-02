@@ -7,6 +7,9 @@ import { authRoutes } from './routes/auth';
 import { profileRoutes } from './routes/profile';
 import { transactionRoutes } from './routes/transactions';
 import { balanceRoutes } from './routes/balance';
+import { fiadoRoutes } from './routes/fiados';
+import { reportRoutes } from './routes/reports';
+import { voiceRoutes } from './routes/voice';
 
 const app = Fastify({
   logger: {
@@ -29,6 +32,9 @@ app.register(authRoutes, { prefix: '/auth' });
 app.register(profileRoutes, { prefix: '/profile' });
 app.register(transactionRoutes, { prefix: '/transactions' });
 app.register(balanceRoutes, { prefix: '/balance' });
+app.register(fiadoRoutes, { prefix: '/fiados' });
+app.register(reportRoutes, { prefix: '/reports' });
+app.register(voiceRoutes, { prefix: '/voice' });
 
 const start = async () => {
   try {

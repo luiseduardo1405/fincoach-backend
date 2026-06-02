@@ -14,6 +14,7 @@ const registerBody = {
     business: { type: 'string', minLength: 1 },
     category: { type: 'string', minLength: 1 },
     capital: { type: 'number', minimum: 0 },
+    city: { type: 'string' },
   },
 } as const;
 
@@ -26,12 +27,22 @@ const loginBody = {
   },
 } as const;
 
-type RegisterBody = { email: string; password: string; name: string; business: string; category: string; capital: number };
+type RegisterBody = { email: string; password: string; name: string; business: string; category: string; capital: number; city?: string };
 type LoginBody = { email: string; password: string };
+
+const userFields = {
+  id: users.id,
+  email: users.email,
+  name: users.name,
+  business: users.business,
+  category: users.category,
+  capital: users.capital,
+  city: users.city,
+} as const;
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: RegisterBody }>('/register', { schema: { body: registerBody } }, async (req, reply) => {
-    const { email, password, name, business, category, capital } = req.body;
+    const { email, password, name, business, category, capital, city } = req.body;
 
     const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
     if (existing.length > 0) {
@@ -39,9 +50,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const [user] = await db.insert(users).values({ email, passwordHash, name, business, category, capital }).returning({
-      id: users.id, email: users.email, name: users.name, business: users.business, category: users.category, capital: users.capital,
-    });
+    const [user] = await db
+      .insert(users)
+      .values({ email, passwordHash, name, business, category, capital, city: city ?? null })
+      .returning(userFields);
 
     const token = fastify.jwt.sign({ sub: user.id, email: user.email });
     return reply.status(201).send({ token, user });
@@ -58,14 +70,16 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const token = fastify.jwt.sign({ sub: user.id, email: user.email });
     return {
       token,
-      user: { id: user.id, email: user.email, name: user.name, business: user.business, category: user.category, capital: user.capital },
+      user: { id: user.id, email: user.email, name: user.name, business: user.business, category: user.category, capital: user.capital, city: user.city },
     };
   });
 
   fastify.get('/me', { preHandler: [fastify.authenticate] }, async (req) => {
-    const [user] = await db.select({
-      id: users.id, email: users.email, name: users.name, business: users.business, category: users.category, capital: users.capital,
-    }).from(users).where(eq(users.id, req.user.sub)).limit(1);
+    const [user] = await db
+      .select(userFields)
+      .from(users)
+      .where(eq(users.id, req.user.sub))
+      .limit(1);
     return user;
   });
 };

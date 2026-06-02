@@ -8,6 +8,7 @@ type PatchBody = {
   business?: string;
   category?: string;
   capital?: number;
+  city?: string;
 };
 
 export const profileRoutes: FastifyPluginAsync = async (fastify) => {
@@ -23,17 +24,19 @@ export const profileRoutes: FastifyPluginAsync = async (fastify) => {
             business: { type: 'string', minLength: 1 },
             category: { type: 'string', minLength: 1 },
             capital: { type: 'number', minimum: 0 },
+            city: { type: 'string', minLength: 1 },
           },
         },
       },
     },
     async (req) => {
-      const { name, business, category, capital } = req.body;
+      const { name, business, category, capital, city } = req.body;
       const updates: Partial<typeof users.$inferInsert> = {};
       if (name !== undefined) updates.name = name;
       if (business !== undefined) updates.business = business;
       if (category !== undefined) updates.category = category;
       if (capital !== undefined) updates.capital = capital;
+      if (city !== undefined) updates.city = city;
 
       const [user] = await db
         .update(users)
@@ -46,6 +49,7 @@ export const profileRoutes: FastifyPluginAsync = async (fastify) => {
           business: users.business,
           category: users.category,
           capital: users.capital,
+          city: users.city,
         });
       return user;
     },
