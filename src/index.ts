@@ -30,6 +30,16 @@ app.decorate('authenticate', async function (request: FastifyRequest, reply: Fas
 
 app.get('/health', () => ({ status: 'ok', version: '1.0.0' }));
 
+// TEMP: log every request to stdout so the app↔backend↔DB round-trip is visible
+// in the Render "Logs" tab while testing with real users. The prod logger is at
+// 'warn' level, so console.log is used to guarantee it shows. Set REQUEST_LOG=false
+// (or delete this hook) once communication is confirmed.
+if (process.env.REQUEST_LOG !== 'false') {
+  app.addHook('onResponse', async (request, reply) => {
+    console.log(`[req] ${request.method} ${request.url} → ${reply.statusCode}`);
+  });
+}
+
 app.register(authRoutes, { prefix: '/auth' });
 app.register(profileRoutes, { prefix: '/profile' });
 app.register(transactionRoutes, { prefix: '/transactions' });
