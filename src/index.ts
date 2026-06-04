@@ -28,6 +28,8 @@ app.decorate('authenticate', async function (request: FastifyRequest, reply: Fas
   }
 });
 
+app.get('/health', () => ({ status: 'ok', version: '1.0.0' }));
+
 app.register(authRoutes, { prefix: '/auth' });
 app.register(profileRoutes, { prefix: '/profile' });
 app.register(transactionRoutes, { prefix: '/transactions' });
