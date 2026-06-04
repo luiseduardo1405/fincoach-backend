@@ -1,7 +1,7 @@
 {
-  "name": "fincoach-backend",
+  "name": "lucas-backend",
   "version": "1.0.0",
-  "description": "FinCoach REST API",
+  "description": "Lucas REST API",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
