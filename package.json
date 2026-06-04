@@ -11,21 +11,20 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.100.1",
-    "@fastify/cors": "^9",
-    "@fastify/jwt": "^8",
-    "@fastify/multipart": "^8.3.1",
+    "@fastify/cors": "^10.1.0",
+    "@fastify/jwt": "^10.1.0",
+    "@fastify/multipart": "^9.4.0",
     "assemblyai": "^4.33.3",
     "bcryptjs": "^2.4.3",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.30",
-    "fastify": "^4",
+    "drizzle-orm": "^0.45.2",
+    "fastify": "^5.8.5",
     "postgres": "^3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
-    "drizzle-kit": "^0.21",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4",
     "typescript": "^5"
   }
