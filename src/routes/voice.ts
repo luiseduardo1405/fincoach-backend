@@ -1,12 +1,12 @@
 import { FastifyPluginAsync } from 'fastify';
 import multipart from '@fastify/multipart';
-import { AssemblyAI } from 'assemblyai';
+import Groq, { toFile } from 'groq-sdk';
 import { db } from '../db';
 import { transactions, fiados } from '../db/schema';
 import { env } from '../env';
 import { parseVoiceCommand } from '../lib/voice-parser';
 
-const assembly = new AssemblyAI({ apiKey: env.ASSEMBLYAI_API_KEY });
+const groq = new Groq({ apiKey: env.GROQ_API_KEY });
 
 const TYPE_LABELS: Record<string, string> = {
   venta: 'Venta registrada',
@@ -62,7 +62,7 @@ export const voiceRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 
   // POST /voice/command
-  // Recibe audio (multipart, campo "audio"), transcribe con AssemblyAI y parsea localmente.
+  // Recibe audio (multipart, campo "audio"), transcribe con Groq (Whisper) y parsea localmente.
   fastify.post('/command', { preHandler: [fastify.authenticate] }, async (req, reply) => {
     const data = await req.file();
     if (!data) return reply.status(400).send({ error: 'No se recibió archivo de audio' });
@@ -77,13 +77,13 @@ export const voiceRoutes: FastifyPluginAsync = async (fastify) => {
 
     let transcription: string;
     try {
-      const uploadUrl = await assembly.files.upload(audioBuffer);
-      const transcript = await assembly.transcripts.transcribe({
-        audio: uploadUrl,
-        language_code: 'es',
+      const transcript = await groq.audio.transcriptions.create({
+        file: await toFile(audioBuffer, data.filename || 'audio.m4a'),
+        model: 'whisper-large-v3-turbo',
+        language: 'es',
       });
 
-      if (transcript.status === 'error' || !transcript.text?.trim()) {
+      if (!transcript.text?.trim()) {
         return reply.status(422).send({ error: 'No se pudo transcribir el audio. Hablá más claro o acercá el micrófono.' });
       }
       transcription = transcript.text.trim();
@@ -106,7 +106,7 @@ export const voiceRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /voice/parse-text
-  // Recibe texto ya transcrito (desde expo-speech-recognition). No consume AssemblyAI.
+  // Recibe texto ya transcrito (desde expo-speech-recognition). No consume Groq.
   fastify.post<{ Body: { text: string } }>(
     '/parse-text',
     {

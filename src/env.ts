@@ -9,7 +9,7 @@ function required(name: string): string {
 export const env = {
   DATABASE_URL: required('DATABASE_URL'),
   JWT_SECRET: required('JWT_SECRET'),
-  ASSEMBLYAI_API_KEY: required('ASSEMBLYAI_API_KEY'),
+  GROQ_API_KEY: required('GROQ_API_KEY'),
   PORT: Number(process.env.PORT ?? 3000),
   NODE_ENV: process.env.NODE_ENV ?? 'development',
 };
