@@ -14,11 +14,11 @@
     "@fastify/cors": "^10.1.0",
     "@fastify/jwt": "^10.1.0",
     "@fastify/multipart": "^9.4.0",
-    "assemblyai": "^4.33.3",
     "bcryptjs": "^2.4.3",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.8.5",
+    "groq-sdk": "^1.2.1",
     "postgres": "^3"
   },
   "devDependencies": {
