@@ -7,7 +7,9 @@ const VALID_TYPES = ['venta', 'gasto', 'casa', 'mercaderia', 'gasto_casa'] as co
 type EntryType = (typeof VALID_TYPES)[number];
 
 type CreateBody = { type: EntryType; amount: number; note?: string; category?: string; occurredAt?: string };
-type UpdateBody = { note?: string; category?: string };
+// A user fixing a mistake must be able to correct the amount/type (e.g. dictated
+// 70 instead of 7), not just the note/category — so the whole entry is editable.
+type UpdateBody = { type?: EntryType; amount?: number; note?: string; category?: string; occurredAt?: string };
 type ListQuery = { page?: number; limit?: number; type?: string; from?: string; to?: string };
 
 export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
@@ -98,17 +100,27 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
         body: {
           type: 'object',
           properties: {
+            type: { type: 'string', enum: VALID_TYPES },
+            amount: { type: 'number', exclusiveMinimum: 0 },
             note: { type: 'string' },
             category: { type: 'string' },
+            occurredAt: { type: 'string' },
           },
         },
       },
     },
     async (req, reply) => {
-      const { note, category } = req.body;
+      const { type, amount, note, category, occurredAt } = req.body;
       const updates: Record<string, unknown> = {};
+      if (type !== undefined) updates.type = type;
+      if (amount !== undefined) updates.amount = amount;
       if (note !== undefined) updates.note = note;
       if (category !== undefined) updates.category = category;
+      if (occurredAt !== undefined) updates.occurredAt = new Date(occurredAt);
+
+      if (Object.keys(updates).length === 0) {
+        return reply.status(400).send({ error: 'Nada para actualizar' });
+      }
 
       const [tx] = await db
         .update(transactions)
