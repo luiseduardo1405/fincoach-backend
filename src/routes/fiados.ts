@@ -5,6 +5,7 @@ import { fiados, transactions } from '../db/schema';
 
 type CreateBody = { person: string; amount: number; product?: string; timestamp?: string };
 type PaidBody = { createTransaction?: boolean };
+type UpdateBody = { person?: string; amount?: number; product?: string };
 
 export const fiadoRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/', { preHandler: [fastify.authenticate] }, async (req) => {
@@ -84,6 +85,44 @@ export const fiadoRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
+      return fiado;
+    },
+  );
+
+  // Correct a mis-entered fiado (wrong name / amount / product). Used by the
+  // app's edit sheet; only the provided fields change.
+  fastify.patch<{ Params: { id: string }; Body: UpdateBody }>(
+    '/:id',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            person: { type: 'string', minLength: 1 },
+            amount: { type: 'number', exclusiveMinimum: 0 },
+            product: { type: 'string' },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { person, amount, product } = req.body;
+      const updates: Record<string, unknown> = {};
+      if (person !== undefined) updates.person = person;
+      if (amount !== undefined) updates.amount = amount;
+      if (product !== undefined) updates.product = product;
+      if (Object.keys(updates).length === 0) {
+        return reply.status(400).send({ error: 'Nada para actualizar' });
+      }
+
+      const [fiado] = await db
+        .update(fiados)
+        .set(updates)
+        .where(and(eq(fiados.id, req.params.id), eq(fiados.userId, req.user.sub)))
+        .returning();
+
+      if (!fiado) return reply.status(404).send({ error: 'Fiado no encontrado' });
       return fiado;
     },
   );
