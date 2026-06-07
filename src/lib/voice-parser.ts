@@ -1,3 +1,5 @@
+import { correctCommandVerb } from './phonetic-verb';
+
 export type ParsedIntent = {
   type: 'venta' | 'gasto' | 'casa' | 'mercaderia' | 'gasto_casa' | 'fiado' | 'unknown';
   amount: number;
@@ -198,7 +200,10 @@ function detectCategory(text: string, type: EntryType): string | null {
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 export function parseVoiceCommand(rawText: string): ParsedIntent {
-  const text = normalize(rawText);
+  // Fuzzy-correct a misheard command verb at the start before detection, so
+  // "veinte 20 soles" / "hasta 5 en luz" classify correctly. Person extraction
+  // below still uses rawText, so names keep their original casing/accents.
+  const text = correctCommandVerb(normalize(rawText));
 
   const { amount, item: multiItem } = parseAmountAndItem(text);
   const { type, confidence } = detectType(text);
