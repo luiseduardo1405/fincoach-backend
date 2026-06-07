@@ -1,0 +1,39 @@
+name: Keep Render warm
+
+# Render's free tier spins the backend down after ~15 min idle, and a cold start
+# takes ~30s — long enough to break a voice command. This pings /health on a
+# schedule so the server stays awake BEFORE anyone opens the app. It's a gentle
+# keep-alive (one tiny GET, a few times per hour), not a load test.
+
+"on":
+  schedule:
+    # Every 10 min, comfortably under the ~15 min idle window. (GitHub may delay
+    # scheduled runs under load; if you still see cold starts, lower to '*/5'.)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {} # allow a manual run from the Actions tab
+
+# Never let pings stack up if one run is slow (e.g. it triggered the cold start).
+concurrency:
+  group: keep-warm
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        env:
+          # Change here (or set a repo variable) if the backend URL ever moves.
+          HEALTH_URL: https://fincoach-backend-iavi.onrender.com/health
+        run: |
+          # Retry a few times: the FIRST ping may itself be what wakes the server,
+          # which can take 30–50s to answer. Succeed as soon as we get a 200.
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 70 "$HEALTH_URL" || echo "000")
+            echo "Attempt $i → HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 15
+          done
+          echo "::warning::/health did not return 200 after 3 attempts"
+          exit 1

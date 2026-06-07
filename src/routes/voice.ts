@@ -105,6 +105,39 @@ export const voiceRoutes: FastifyPluginAsync = async (fastify) => {
     return { transcription, intent, saved, confirmation };
   });
 
+  // POST /voice/transcribe
+  // Recibe audio (multipart, campo "audio") y devuelve SOLO la transcripción.
+  // No parsea ni guarda nada: la app sigue siendo la fuente de verdad y hace su
+  // parsing + guardado local. Se usa como RESPALDO del reconocimiento on-device
+  // (Vosk/Google) cuando este falla y hay conexión.
+  fastify.post('/transcribe', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+    const data = await req.file();
+    if (!data) return reply.status(400).send({ error: 'No se recibió archivo de audio' });
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of data.file) chunks.push(chunk);
+    const audioBuffer = Buffer.concat(chunks);
+
+    if (audioBuffer.length === 0) {
+      return reply.status(400).send({ error: 'El archivo de audio está vacío' });
+    }
+
+    try {
+      const transcript = await groq.audio.transcriptions.create({
+        file: await toFile(audioBuffer, data.filename || 'audio.wav'),
+        model: 'whisper-large-v3-turbo',
+        language: 'es',
+      });
+      const text = transcript.text?.trim() ?? '';
+      if (!text) {
+        return reply.status(422).send({ error: 'No se pudo transcribir el audio.' });
+      }
+      return { text };
+    } catch {
+      return reply.status(502).send({ error: 'Error al conectar con el servicio de transcripción' });
+    }
+  });
+
   // POST /voice/parse-text
   // Recibe texto ya transcrito (desde expo-speech-recognition). No consume Groq.
   fastify.post<{ Body: { text: string } }>(
