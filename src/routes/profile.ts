@@ -20,11 +20,11 @@ export const profileRoutes: FastifyPluginAsync = async (fastify) => {
         body: {
           type: 'object',
           properties: {
-            name: { type: 'string', minLength: 1 },
-            business: { type: 'string', minLength: 1 },
-            category: { type: 'string', minLength: 1 },
-            capital: { type: 'number', minimum: 0 },
-            city: { type: 'string', minLength: 1 },
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            business: { type: 'string', minLength: 1, maxLength: 150 },
+            category: { type: 'string', minLength: 1, maxLength: 50 },
+            capital: { type: 'number', minimum: 0, maximum: 10_000_000 },
+            city: { type: 'string', minLength: 1, maxLength: 100 },
           },
         },
       },
