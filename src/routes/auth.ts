@@ -4,17 +4,21 @@ import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { users } from '../db/schema';
 
+// Tokens expire after 90 days. This bounds the exposure window if a token is
+// ever leaked — without expiry a stolen token grants permanent access.
+const JWT_TTL = '90d';
+
 const registerBody = {
   type: 'object',
   required: ['email', 'password', 'name', 'business', 'category', 'capital'],
   properties: {
-    email: { type: 'string', format: 'email' },
-    password: { type: 'string', minLength: 6 },
-    name: { type: 'string', minLength: 1 },
-    business: { type: 'string', minLength: 1 },
-    category: { type: 'string', minLength: 1 },
-    capital: { type: 'number', minimum: 0 },
-    city: { type: 'string' },
+    email: { type: 'string', format: 'email', maxLength: 254 },
+    password: { type: 'string', minLength: 6, maxLength: 128 },
+    name: { type: 'string', minLength: 1, maxLength: 100 },
+    business: { type: 'string', minLength: 1, maxLength: 150 },
+    category: { type: 'string', minLength: 1, maxLength: 50 },
+    capital: { type: 'number', minimum: 0, maximum: 10_000_000 },
+    city: { type: 'string', maxLength: 100 },
   },
 } as const;
 
@@ -41,7 +45,21 @@ const userFields = {
 } as const;
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.post<{ Body: RegisterBody }>('/register', { schema: { body: registerBody } }, async (req, reply) => {
+  // Strict rate limit for auth endpoints: 10 attempts per 15 min per IP.
+  // Prevents brute-force on /login and account-spam on /register.
+  const authRateLimit = {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes',
+        errorResponseBuilder: () => ({
+          error: 'Demasiados intentos. Espera 15 minutos e intenta de nuevo.',
+        }),
+      },
+    },
+  };
+
+  fastify.post<{ Body: RegisterBody }>('/register', { schema: { body: registerBody }, ...authRateLimit }, async (req, reply) => {
     const { email, password, name, business, category, capital, city } = req.body;
 
     const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
@@ -55,11 +73,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       .values({ email, passwordHash, name, business, category, capital, city: city ?? null })
       .returning(userFields);
 
-    const token = fastify.jwt.sign({ sub: user.id, email: user.email });
+    const token = fastify.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: JWT_TTL });
     return reply.status(201).send({ token, user });
   });
 
-  fastify.post<{ Body: LoginBody }>('/login', { schema: { body: loginBody } }, async (req, reply) => {
+  fastify.post<{ Body: LoginBody }>('/login', { schema: { body: loginBody }, ...authRateLimit }, async (req, reply) => {
     const { email, password } = req.body;
 
     const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -67,7 +85,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(401).send({ error: 'Credenciales inválidas' });
     }
 
-    const token = fastify.jwt.sign({ sub: user.id, email: user.email });
+    const token = fastify.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: JWT_TTL });
     return {
       token,
       user: { id: user.id, email: user.email, name: user.name, business: user.business, category: user.category, capital: user.capital, city: user.city },

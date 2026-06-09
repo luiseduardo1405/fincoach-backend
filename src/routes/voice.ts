@@ -58,12 +58,25 @@ async function saveIntent(
   };
 }
 
+// Voice endpoints call Groq (paid API). Strict rate limit prevents key abuse.
+const voiceRateLimit = {
+  config: {
+    rateLimit: {
+      max: 30,
+      timeWindow: '1 minute',
+      errorResponseBuilder: () => ({
+        error: 'Límite de comandos de voz alcanzado. Espera un momento.',
+      }),
+    },
+  },
+};
+
 export const voiceRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
 
   // POST /voice/command
   // Recibe audio (multipart, campo "audio"), transcribe con Groq (Whisper) y parsea localmente.
-  fastify.post('/command', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+  fastify.post('/command', { preHandler: [fastify.authenticate], ...voiceRateLimit }, async (req, reply) => {
     const data = await req.file();
     if (!data) return reply.status(400).send({ error: 'No se recibió archivo de audio' });
 
@@ -110,7 +123,7 @@ export const voiceRoutes: FastifyPluginAsync = async (fastify) => {
   // No parsea ni guarda nada: la app sigue siendo la fuente de verdad y hace su
   // parsing + guardado local. Se usa como RESPALDO del reconocimiento on-device
   // (Vosk/Google) cuando este falla y hay conexión.
-  fastify.post('/transcribe', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+  fastify.post('/transcribe', { preHandler: [fastify.authenticate], ...voiceRateLimit }, async (req, reply) => {
     const data = await req.file();
     if (!data) return reply.status(400).send({ error: 'No se recibió archivo de audio' });
 
@@ -148,9 +161,10 @@ export const voiceRoutes: FastifyPluginAsync = async (fastify) => {
         body: {
           type: 'object',
           required: ['text'],
-          properties: { text: { type: 'string', minLength: 1 } },
+          properties: { text: { type: 'string', minLength: 1, maxLength: 500 } },
         },
       },
+      ...voiceRateLimit,
     },
     async (req, reply) => {
       const transcription = req.body.text.trim();

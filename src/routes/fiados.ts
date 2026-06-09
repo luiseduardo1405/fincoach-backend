@@ -26,10 +26,10 @@ export const fiadoRoutes: FastifyPluginAsync = async (fastify) => {
           type: 'object',
           required: ['person', 'amount'],
           properties: {
-            person: { type: 'string', minLength: 1 },
-            amount: { type: 'number', exclusiveMinimum: 0 },
-            product: { type: 'string' },
-            timestamp: { type: 'string' },
+            person: { type: 'string', minLength: 1, maxLength: 100 },
+            amount: { type: 'number', exclusiveMinimum: 0, maximum: 10_000_000 },
+            product: { type: 'string', maxLength: 200 },
+            timestamp: { type: 'string', maxLength: 30 },
           },
         },
       },
@@ -99,9 +99,9 @@ export const fiadoRoutes: FastifyPluginAsync = async (fastify) => {
         body: {
           type: 'object',
           properties: {
-            person: { type: 'string', minLength: 1 },
-            amount: { type: 'number', exclusiveMinimum: 0 },
-            product: { type: 'string' },
+            person: { type: 'string', minLength: 1, maxLength: 100 },
+            amount: { type: 'number', exclusiveMinimum: 0, maximum: 10_000_000 },
+            product: { type: 'string', maxLength: 200 },
           },
         },
       },
