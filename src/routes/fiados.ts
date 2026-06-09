@@ -29,7 +29,7 @@ export const fiadoRoutes: FastifyPluginAsync = async (fastify) => {
             person: { type: 'string', minLength: 1, maxLength: 100 },
             amount: { type: 'number', exclusiveMinimum: 0, maximum: 10_000_000 },
             product: { type: 'string', maxLength: 200 },
-            timestamp: { type: 'string', maxLength: 30 },
+            timestamp: { type: 'string', maxLength: 30, pattern: '^\\d{4}-\\d{2}-\\d{2}' },
           },
         },
       },
@@ -41,7 +41,7 @@ export const fiadoRoutes: FastifyPluginAsync = async (fastify) => {
         .values({
           userId: req.user.sub,
           person,
-          amount,
+          amount: amount.toString(),
           product: product ?? null,
           timestamp: timestamp ? new Date(timestamp) : new Date(),
         })
@@ -110,7 +110,7 @@ export const fiadoRoutes: FastifyPluginAsync = async (fastify) => {
       const { person, amount, product } = req.body;
       const updates: Record<string, unknown> = {};
       if (person !== undefined) updates.person = person;
-      if (amount !== undefined) updates.amount = amount;
+      if (amount !== undefined) updates.amount = amount.toString();
       if (product !== undefined) updates.product = product;
       if (Object.keys(updates).length === 0) {
         return reply.status(400).send({ error: 'Nada para actualizar' });

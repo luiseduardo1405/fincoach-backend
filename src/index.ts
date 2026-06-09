@@ -46,12 +46,14 @@ app.register(fjwt, { secret: env.JWT_SECRET });
 app.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
   try {
     await request.jwtVerify();
-  } catch (err) {
-    reply.send(err);
+  } catch {
+    // Send a generic 401 — exposing "jwt expired" / "invalid signature" etc.
+    // helps attackers understand which tokens were forged vs. simply expired.
+    reply.status(401).send({ error: 'No autorizado' });
   }
 });
 
-app.get('/health', () => ({ status: 'ok', version: '1.0.0' }));
+app.get('/health', () => ({ status: 'ok' }));
 
 if (process.env.REQUEST_LOG !== 'false') {
   app.addHook('onResponse', async (request, reply) => {

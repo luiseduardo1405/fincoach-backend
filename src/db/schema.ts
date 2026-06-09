@@ -1,5 +1,7 @@
-import { pgTable, uuid, text, real, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, numeric, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 
+// numeric(12,2) gives up to 9,999,999,999.99 — sufficient for any realistic amount
+// and avoids the float32 rounding errors of `real` (e.g. 1234567.89 → 1234568).
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').unique().notNull(),
@@ -7,7 +9,7 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   business: text('business').notNull(),
   category: text('category').notNull(),
-  capital: real('capital').notNull().default(0),
+  capital: numeric('capital', { precision: 12, scale: 2 }).notNull().default('0'),
   city: text('city'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
@@ -18,7 +20,7 @@ export const transactions = pgTable('transactions', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   type: text('type').notNull(), // 'venta' | 'gasto' | 'casa' | 'mercaderia' | 'gasto_casa'
-  amount: real('amount').notNull(),
+  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
   note: text('note'),
   category: text('category'),
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
@@ -34,7 +36,7 @@ export const fiados = pgTable('fiados', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   person: text('person').notNull(),
-  amount: real('amount').notNull(),
+  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
   product: text('product'),
   timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
   paid: boolean('paid').notNull().default(false),
