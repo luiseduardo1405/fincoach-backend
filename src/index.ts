@@ -12,6 +12,9 @@ import { balanceRoutes } from './routes/balance';
 import { fiadoRoutes } from './routes/fiados';
 import { reportRoutes } from './routes/reports';
 import { voiceRoutes } from './routes/voice';
+import { subscriptionRoutes } from './routes/subscriptions';
+import { webhookRoutes } from './routes/webhooks';
+import { startLucasAdviceJob } from './lib/lucas-advice';
 
 const app = Fastify({
   logger: {
@@ -68,6 +71,11 @@ app.register(balanceRoutes, { prefix: '/balance' });
 app.register(fiadoRoutes, { prefix: '/fiados' });
 app.register(reportRoutes, { prefix: '/reports' });
 app.register(voiceRoutes, { prefix: '/voice' });
+app.register(subscriptionRoutes, { prefix: '/subscriptions' });
+app.register(webhookRoutes, { prefix: '/webhooks' });
+
+// Consejo semanal de Lucas para usuarios Max (no-op sin ANTHROPIC_API_KEY).
+startLucasAdviceJob((msg) => app.log.info(msg));
 
 const start = async () => {
   try {
