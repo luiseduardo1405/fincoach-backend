@@ -24,8 +24,8 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             page: { type: 'integer', minimum: 1, default: 1 },
             limit: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
             type: { type: 'string' },
-            from: { type: 'string' },
-            to: { type: 'string' },
+            from: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}' },
+            to: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}' },
           },
         },
       },
@@ -68,7 +68,7 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             amount: { type: 'number', exclusiveMinimum: 0, maximum: 10_000_000 },
             note: { type: 'string', maxLength: 300 },
             category: { type: 'string', maxLength: 50 },
-            occurredAt: { type: 'string', maxLength: 30 },
+            occurredAt: { type: 'string', maxLength: 30, pattern: '^\\d{4}-\\d{2}-\\d{2}' },
           },
         },
       },
@@ -81,7 +81,7 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
         .values({
           userId: req.user.sub,
           type,
-          amount,
+          amount: amount.toString(),
           note: note ?? null,
           category: category ?? null,
           occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
@@ -104,7 +104,7 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
             amount: { type: 'number', exclusiveMinimum: 0, maximum: 10_000_000 },
             note: { type: 'string', maxLength: 300 },
             category: { type: 'string', maxLength: 50 },
-            occurredAt: { type: 'string', maxLength: 30 },
+            occurredAt: { type: 'string', maxLength: 30, pattern: '^\\d{4}-\\d{2}-\\d{2}' },
           },
         },
       },
@@ -113,7 +113,7 @@ export const transactionRoutes: FastifyPluginAsync = async (fastify) => {
       const { type, amount, note, category, occurredAt } = req.body;
       const updates: Record<string, unknown> = {};
       if (type !== undefined) updates.type = type;
-      if (amount !== undefined) updates.amount = amount;
+      if (amount !== undefined) updates.amount = amount.toString();
       if (note !== undefined) updates.note = note;
       if (category !== undefined) updates.category = category;
       if (occurredAt !== undefined) updates.occurredAt = new Date(occurredAt);

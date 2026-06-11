@@ -19,9 +19,13 @@ export const reportRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (req) => {
+    async (req, reply) => {
       const userId = req.user.sub;
       const monthStr = req.query.month ?? new Date().toISOString().slice(0, 7);
+
+      if (!/^\d{4}-\d{2}$/.test(monthStr)) {
+        return reply.status(400).send({ error: 'Formato de mes inválido. Use YYYY-MM' });
+      }
 
       const [year, month] = monthStr.split('-').map(Number);
       const from = new Date(year, month - 1, 1);

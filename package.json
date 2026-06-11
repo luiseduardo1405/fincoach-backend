@@ -8,9 +8,11 @@
     "start": "node dist/index.js",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed-plans": "tsx src/db/seed-plans.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "@fastify/cors": "^10.1.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/jwt": "^10.1.0",
@@ -21,11 +23,13 @@
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.8.5",
     "groq-sdk": "^1.2.1",
+    "node-cron": "^4.2.1",
     "postgres": "^3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4",
     "typescript": "^5"

@@ -35,7 +35,7 @@ export const profileRoutes: FastifyPluginAsync = async (fastify) => {
       if (name !== undefined) updates.name = name;
       if (business !== undefined) updates.business = business;
       if (category !== undefined) updates.category = category;
-      if (capital !== undefined) updates.capital = capital;
+      if (capital !== undefined) updates.capital = capital.toString();
       if (city !== undefined) updates.city = city;
 
       const [user] = await db

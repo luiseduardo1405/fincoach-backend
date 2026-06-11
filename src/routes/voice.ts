@@ -27,7 +27,7 @@ async function saveIntent(
       .values({
         userId,
         person: intent.person ?? 'Persona desconocida',
-        amount: intent.amount,
+        amount: intent.amount.toString(),
         product: intent.item ?? null,
         timestamp: new Date(),
       })
@@ -44,7 +44,7 @@ async function saveIntent(
     .values({
       userId,
       type: intent.type,
-      amount: intent.amount,
+      amount: intent.amount.toString(),
       note: intent.item ?? null,
       category: intent.category ?? null,
       occurredAt: new Date(),

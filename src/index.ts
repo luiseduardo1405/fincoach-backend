@@ -12,6 +12,9 @@ import { balanceRoutes } from './routes/balance';
 import { fiadoRoutes } from './routes/fiados';
 import { reportRoutes } from './routes/reports';
 import { voiceRoutes } from './routes/voice';
+import { subscriptionRoutes } from './routes/subscriptions';
+import { webhookRoutes } from './routes/webhooks';
+import { startLucasAdviceJob } from './lib/lucas-advice';
 
 const app = Fastify({
   logger: {
@@ -46,12 +49,14 @@ app.register(fjwt, { secret: env.JWT_SECRET });
 app.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
   try {
     await request.jwtVerify();
-  } catch (err) {
-    reply.send(err);
+  } catch {
+    // Send a generic 401 — exposing "jwt expired" / "invalid signature" etc.
+    // helps attackers understand which tokens were forged vs. simply expired.
+    reply.status(401).send({ error: 'No autorizado' });
   }
 });
 
-app.get('/health', () => ({ status: 'ok', version: '1.0.0' }));
+app.get('/health', () => ({ status: 'ok' }));
 
 if (process.env.REQUEST_LOG !== 'false') {
   app.addHook('onResponse', async (request, reply) => {
@@ -66,6 +71,11 @@ app.register(balanceRoutes, { prefix: '/balance' });
 app.register(fiadoRoutes, { prefix: '/fiados' });
 app.register(reportRoutes, { prefix: '/reports' });
 app.register(voiceRoutes, { prefix: '/voice' });
+app.register(subscriptionRoutes, { prefix: '/subscriptions' });
+app.register(webhookRoutes, { prefix: '/webhooks' });
+
+// Consejo semanal de Lucas para usuarios Max (no-op sin ANTHROPIC_API_KEY).
+startLucasAdviceJob((msg) => app.log.info(msg));
 
 const start = async () => {
   try {

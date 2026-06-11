@@ -26,8 +26,8 @@ const loginBody = {
   type: 'object',
   required: ['email', 'password'],
   properties: {
-    email: { type: 'string' },
-    password: { type: 'string' },
+    email: { type: 'string', format: 'email', maxLength: 254 },
+    password: { type: 'string', maxLength: 128 },
   },
 } as const;
 
@@ -64,15 +64,17 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
     if (existing.length > 0) {
+      req.log.warn({ event: 'auth.register.duplicate', email }, 'Intento de registro con email existente');
       return reply.status(409).send({ error: 'Email ya registrado' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const [user] = await db
       .insert(users)
-      .values({ email, passwordHash, name, business, category, capital, city: city ?? null })
+      .values({ email, passwordHash, name, business, category, capital: capital.toString(), city: city ?? null })
       .returning(userFields);
 
+    req.log.info({ event: 'auth.register', userId: user.id }, 'Nuevo usuario registrado');
     const token = fastify.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: JWT_TTL });
     return reply.status(201).send({ token, user });
   });
@@ -82,9 +84,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      req.log.warn({ event: 'auth.login.fail', email }, 'Intento de login fallido');
       return reply.status(401).send({ error: 'Credenciales inválidas' });
     }
 
+    req.log.info({ event: 'auth.login.success', userId: user.id }, 'Login exitoso');
     const token = fastify.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: JWT_TTL });
     return {
       token,

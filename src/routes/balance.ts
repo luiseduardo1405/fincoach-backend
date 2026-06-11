@@ -25,7 +25,7 @@ export const balanceRoutes: FastifyPluginAsync = async (fastify) => {
       .from(transactions)
       .where(eq(transactions.userId, userId));
 
-    const capital = userData?.capital ?? 0;
+    const capital = Number(userData?.capital ?? 0);
     const business =
       capital +
       Number(agg.totalVenta) -
