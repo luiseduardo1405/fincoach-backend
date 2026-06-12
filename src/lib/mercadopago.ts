@@ -6,9 +6,11 @@ import { mpAccessToken } from '../env';
 
 const MP_API = 'https://api.mercadopago.com';
 
-// Deep link al que MP redirige al usuario al terminar el checkout. Debe
-// coincidir con el "scheme" del app.json del frontend ("lucas").
-export const MP_BACK_URL = 'lucas://subscription/result';
+// MP exige que back_url sea https (rechaza schemes como lucas://), así que
+// apunta a /subscriptions/return en este backend, que redirige 302 al deep
+// link de la app. APP_DEEP_LINK debe coincidir con el "scheme" del app.json.
+export const APP_DEEP_LINK = 'lucas://subscription/result';
+export const MP_BACK_URL = 'https://fincoach-backend-iavi.onrender.com/subscriptions/return';
 
 export type MpPreapproval = {
   id?: string;
@@ -34,14 +36,32 @@ async function mpFetch(path: string, init?: RequestInit): Promise<MpPreapproval>
   return (await res.json()) as MpPreapproval;
 }
 
-/** Crea la suscripción (preapproval) sobre un plan ya creado en MP. */
-export function createPreapproval(mpPlanId: string, payerEmail?: string): Promise<MpPreapproval> {
+/**
+ * Crea la suscripción (preapproval) en estado pendiente y devuelve el
+ * init_point de checkout. Se usa auto_recurring inline en vez de
+ * preapproval_plan_id: con plan asociado MP exige card_token_id (espera que
+ * la tarjeta ya esté capturada), mientras que el flujo "pendiente" redirige
+ * al payer al checkout de MP. payer_email es obligatorio en este flujo.
+ */
+export function createPreapproval(opts: {
+  reason: string;
+  amount: number; // en PEN
+  frequencyMonths: 1 | 12;
+  payerEmail: string;
+}): Promise<MpPreapproval> {
   return mpFetch('/preapproval', {
     method: 'POST',
     body: JSON.stringify({
-      preapproval_plan_id: mpPlanId,
+      reason: opts.reason,
+      auto_recurring: {
+        frequency: opts.frequencyMonths,
+        frequency_type: 'months',
+        transaction_amount: opts.amount,
+        currency_id: 'PEN',
+      },
       back_url: MP_BACK_URL,
-      ...(payerEmail ? { payer_email: payerEmail } : {}),
+      payer_email: opts.payerEmail,
+      status: 'pending',
     }),
   });
 }

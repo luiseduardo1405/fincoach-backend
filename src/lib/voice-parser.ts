@@ -125,11 +125,21 @@ const TYPE_RULES: Array<{ type: EntryType; triggers: RegExp[] }> = [
   },
 ];
 
+// "fié" → "fui" es un mishearing muy común del ASR, pero "fui" solo es ambiguo
+// ("fui al mercado"). Solo cuenta como fiado con destinatario ("a Juan") y SIN
+// otro verbo de dinero que explique la frase (espejo de parseFiado.ts del app).
+const FUI_FIADO_RE = /\bfui\b/;
+const RECIPIENT_RE = /\b(?:a|para)\s+\S/;
+const OTHER_MONEY_VERB_RE = /\b(?:vend|gast|compr|pagu|pago|pagar|cobr|retir|saqu|invert)\w*/;
+
 function detectType(text: string): { type: EntryType; confidence: 'high' | 'medium' | 'low' } {
   for (const { type, triggers } of TYPE_RULES) {
     const hits = triggers.filter((r) => r.test(text)).length;
     if (hits >= 2) return { type, confidence: 'high' };
     if (hits === 1) return { type, confidence: 'medium' };
+  }
+  if (FUI_FIADO_RE.test(text) && RECIPIENT_RE.test(text) && !OTHER_MONEY_VERB_RE.test(text)) {
+    return { type: 'fiado', confidence: 'medium' };
   }
   return { type: 'unknown', confidence: 'low' };
 }

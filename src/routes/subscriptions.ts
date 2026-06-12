@@ -2,11 +2,19 @@ import { FastifyPluginAsync } from 'fastify';
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../db';
 import { subscriptionPlans, userSubscriptions, users, lucasInsights } from '../db/schema';
-import { createPreapproval, cancelPreapproval, isMpConfigured } from '../lib/mercadopago';
+import { createPreapproval, cancelPreapproval, isMpConfigured, APP_DEEP_LINK } from '../lib/mercadopago';
 
 type CreateBody = { tier: 'pro' | 'max'; billing: 'monthly' | 'annual' };
 
 export const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
+  // Puente de retorno del checkout: MP solo acepta back_url https, así que
+  // redirige aquí y nosotros reenviamos al deep link de la app conservando
+  // los query params que agrega MP (preapproval_id, status, etc.).
+  fastify.get('/return', async (req, reply) => {
+    const qs = req.raw.url?.split('?')[1];
+    return reply.redirect(`${APP_DEEP_LINK}${qs ? `?${qs}` : ''}`, 302);
+  });
+
   // Catálogo de planes activos (público: la pantalla de planes lo muestra
   // antes de que exista sesión de pago).
   fastify.get('/plans', { preHandler: [fastify.authenticate] }, async () => {
@@ -56,7 +64,12 @@ export const subscriptionRoutes: FastifyPluginAsync = async (fastify) => {
         .limit(1);
       if (!plan) return reply.status(404).send({ error: 'Plan no encontrado' });
 
-      const preapproval = await createPreapproval(plan.mpPlanId, req.user.email);
+      const preapproval = await createPreapproval({
+        reason: `Lucas ${tier === 'max' ? 'Max' : 'Pro'} - ${billing === 'annual' ? 'Anual' : 'Mensual'}`,
+        amount: Number(plan.price),
+        frequencyMonths: billing === 'annual' ? 12 : 1,
+        payerEmail: req.user.email,
+      });
       if (!preapproval.id || !preapproval.init_point) {
         fastify.log.error({ preapproval }, 'MP preapproval creation failed');
         return reply.status(502).send({ error: 'No se pudo iniciar el pago en Mercado Pago' });

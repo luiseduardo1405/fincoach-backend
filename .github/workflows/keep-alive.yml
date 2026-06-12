@@ -1,0 +1,20 @@
+# Mantiene despierto el backend en Render (free tier duerme tras ~15 min de
+# inactividad y el cold start tarda 30-50s, perdiendo las primeras peticiones
+# del app). Un ping cada 10 minutos evita que se duerma en horario de uso.
+# Nota: los crons de GitHub Actions pueden retrasarse algunos minutos; el app
+# igual tiene outbox con reintentos como respaldo.
+name: Keep backend awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://fincoach-backend-iavi.onrender.com/health || echo "000")
+          echo "Health responded: $code"

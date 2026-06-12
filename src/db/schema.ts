@@ -13,8 +13,14 @@ export const users = pgTable('users', {
   city: text('city'),
   // 'free' | 'pro' | 'max' — actualizado por el webhook de Mercado Pago.
   subscriptionTier: text('subscription_tier').notNull().default('free'),
+  // ANDROID_ID (estable por dispositivo + firma del APK). Es solo una PISTA de
+  // recuperación tras reinstalar — la credencial sigue siendo email+password
+  // aleatorios por instalación; ver /auth/recover-device.
+  deviceId: text('device_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-});
+}, (t) => ({
+  deviceIdx: index('users_device_id_idx').on(t.deviceId),
+}));
 
 export const transactions = pgTable('transactions', {
   id: uuid('id').primaryKey().defaultRandom(),
